@@ -1,0 +1,53 @@
+<?php
+namespace Magentomobileshop\Pushnotification\Controller\Adminhtml\Ajax;
+
+use Magentomobileshop\Pushnotification\Helper\Data;
+use Magento\Framework\App\Action\Context;
+
+class Index extends \Magento\Backend\App\Action
+{
+    private $resultPageFactory;
+    private $helper;//@codingStandardsIgnoreStart
+    public function __construct(
+        \Magento\Backend\App\Action\Context $context,
+        \Magento\Framework\View\Result\PageFactory $resultPageFactory,
+        Data $helper,
+        \Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
+        \Magento\Framework\App\Filesystem\DirectoryList $directory_list
+    ) {
+        $this->resultPageFactory = $resultPageFactory;
+        $this->helper            = $helper;
+        $this->resultJsonFactory = $resultJsonFactory;
+        $this->directory_list    = $directory_list;
+        return parent::__construct($context);
+    }
+
+    public function execute()
+    {
+        if ($this->getRequest()->getPost('message')) {
+            $type    = $this->getRequest()->getPost('type');
+            $message = $this->getRequest()->getPost('message');
+            if ($this->helper->getBackground()) {
+                $this->helper->msgConsole($type, $message);
+                $response['statusCode'] = 200;
+                $response['type']       = $type;
+                $response['msg']        = 'Notification is sending through console.';
+                $result                 = $this->resultJsonFactory->create();
+                return $result->setData($response);
+            } else {
+                $response = $this->helper->sendPushNotifications($type, $message);
+                $result   = $this->resultJsonFactory->create();
+                if (empty($response)) {
+                    return $result->setData(['statusCode' => 400,
+                        'msg'                                 => 'There is something wrong to process your request.']);
+                } else {
+                    return $result->setData($response);
+                }
+            }
+        } else {
+            $result = $this->resultJsonFactory->create();
+            return $result->setData(['statusCode' => 400,
+                'msg'                                 => 'There is something wrong to process your request.']);
+        }
+    }//@codingStandardsIgnoreEnd
+}
